@@ -1,16 +1,10 @@
-certifi==2021.10.8
-charset-normalizer==2.0.12
 et-xmlfile==1.1.0
 greenlet==1.1.2
-idna==3.3
 numpy==1.22.3
 openpyxl==3.0.9
-panda==0.3.1
 pandas==1.4.2
 psycopg2==2.9.3
 python-dateutil==2.8.2
 pytz==2022.1
-requests==2.27.1
 six==1.16.0
 SQLAlchemy==1.4.36
-urllib3==1.26.9
