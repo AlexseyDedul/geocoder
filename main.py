@@ -10,9 +10,6 @@ import re
 import psycopg2
 import openpyxl
 
-sys.setrecursionlimit(10**7) # max depth of recursion
-threading.stack_size(2**20)
-
 engine_from = create_engine("postgresql+psycopg2://dedul:dedul@localhost:15432/gis")
 
 
@@ -80,12 +77,12 @@ def not_correctly_address(n, m, results, housenumber, street):
     if housenumber is None or street is None:
         return results[0]
 
-    if len(results) <= 5:
-        return results[0]
+    while len(results) > 5:
+        results = __search_address(n, m, results, housenumber)
+        n += 3
+        m -= 2
 
-    if len(results) > 5:
-        result = __search_address(n, m, results, housenumber)
-        return not_correctly_address(n + 4, m - 3, result, housenumber, street)
+    return results[0]
 
 
 def get_correct_housenumber(number):
@@ -245,12 +242,6 @@ def get_address_from_db(city, street, housenumber):
         }
 
 
-def work_with_data(city, street, housenumber):
-    # print(f"{city} {street} {housenumber}")
-    result = get_address_from_db(city, street, housenumber)
-    return result
-
-
 def work_with_files(path):
     count = 0
     countNFList = []
@@ -265,7 +256,7 @@ def work_with_files(path):
         city = worksheet.cell(i, path['city']).value
         street = worksheet.cell(i, path['street']).value
         housenumber = worksheet.cell(i, path['number']).value
-        result = work_with_data(city, street, housenumber)
+        result = get_address_from_db(city, street, housenumber)
         print(result)
         try:
             worksheet.cell(row=i, column=column).value = f"({result['found_address']['lat']}, {result['found_address']['lan']})"
