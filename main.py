@@ -1,6 +1,3 @@
-import random
-import sys
-import threading
 from threading import Thread
 
 from sqlalchemy import create_engine
@@ -70,17 +67,34 @@ def correctly_address(results, housenumber):
         return None
 
 
-def not_correctly_address(n, m, results, housenumber, street):
+def not_correctly_address(results, housenumber, street):
     if not results:
         return {}
 
-    if housenumber is None or street is None:
+    if street is None:
+        return results[0]
+    print(housenumber)
+    if housenumber is None or housenumber == "":
         return results[0]
 
-    while len(results) > 5:
-        results = __search_address(n, m, results, housenumber)
-        n += 3
-        m -= 2
+    left = int(re.search(r'\d+', housenumber).group()) if housenumber is not None and \
+                                                          re.search(r'\d+', housenumber) is not None else 0
+    right = int(re.search(r'\d+', results[0]['housenumb']).group()) if results[0]['housenumb'] is not None and \
+                                                                       re.search(r'\d+', results[0]['housenumb']) is not None else 0
+
+    n = left - right
+    if n < 0:
+        n, m = left - right, right - left
+    else:
+        m, n = left - right, right - left
+    result_arr = results
+    while len(result_arr) > 4:
+        result_arr = __search_address(n, m, result_arr, housenumber)
+        n += 1
+        m -= 1
+
+    if result_arr:
+        return result_arr[0]
 
     return results[0]
 
@@ -91,8 +105,10 @@ def get_correct_housenumber(number):
         number = number.strip()
         if number.find('-') > 0:
             for n in number.split('-'):
-                if n.isnumeric():
+                tmp_n = re.search(r'\d+', n).group() if n is not None and re.search(r'\d+', n) is not None else ""
+                if tmp_n.isnumeric():
                     housenumber = n
+                    break
         else:
             housenumber = number
         return housenumber.strip()
@@ -103,7 +119,7 @@ def get_correct_housenumber(number):
 def __check_symbols_drop_in_word(addr):
     if addr.find(".") > 0:
         s = re.findall(r'\.\w+$', addr)
-        return s[0].replace(".", '') if s else addr
+        return s[0].replace(".", '') if s else addr.replace(".", '')
     return addr
 
 
@@ -167,7 +183,7 @@ def __create_sql_query_for_street(street):
         return ""
 
 
-def __get_addresses_list_from_db(city, street):
+def __get_addresses_list_from_db(city, street=None):
     results = []
     city_query = __create_sql_query_for_city(city)
     street_query = __create_sql_query_for_street(street)
@@ -200,8 +216,11 @@ def get_address_from_db(city, street, housenumber):
     street_correct = get_correct_address(street)
     city_correct = get_correct_address(city)
     housenumber = get_correct_housenumber(housenumber)
+    print(f"{city_correct} {street_correct} {housenumber}")
     results = __get_addresses_list_from_db(city_correct, street_correct)
-
+    if not results:
+        results = __get_addresses_list_from_db(city_correct)
+        street_correct = None
     if street_correct is not None:
         results = __sort_results(results)
 
@@ -211,7 +230,7 @@ def get_address_from_db(city, street, housenumber):
         addr = correctly_address(results, housenumber)
 
     if not addr:
-        addr = not_correctly_address(-30, 30, results, housenumber, street_correct)
+        addr = not_correctly_address(results, housenumber, street_correct)
         correctly = False
 
     if addr:
@@ -252,32 +271,37 @@ def work_with_files(path):
     worksheet = workbook.active
 
     # for i in range(1, 9):
-    for i in range(1, worksheet.max_row):
-        city = worksheet.cell(i, path['city']).value
-        street = worksheet.cell(i, path['street']).value
-        housenumber = worksheet.cell(i, path['number']).value
-        result = get_address_from_db(city, street, housenumber)
-        print(result)
+    for i in range(1, worksheet.max_row + 1):
         try:
-            worksheet.cell(row=i, column=column).value = f"({result['found_address']['lat']}, {result['found_address']['lan']})"
-            worksheet.cell(row=i, column=column + 1).value = f"({result['correctly']})"
-        except KeyError:
-            pass
+            city = worksheet.cell(i, path['city']).value
+            street = worksheet.cell(i, path['street']).value
+            housenumber = worksheet.cell(i, path['number']).value
+            print(f"{city} {street} {housenumber}")
+            result = get_address_from_db(city, street, housenumber)
+            print(result)
+            try:
+                worksheet.cell(row=i, column=column).value = f"({result['found_address']['lat']}, {result['found_address']['lan']})"
+                worksheet.cell(row=i, column=column + 1).value = f"({result['correctly']})"
+            except KeyError:
+                pass
 
-        try:
-            if not result['correctly']:
-                countFalse += 1
-            else:
-                countTrue += 1
-        except KeyError:
-            pass
+            try:
+                if not result['correctly']:
+                    countFalse += 1
+                else:
+                    countTrue += 1
+            except KeyError:
+                pass
 
-        try:
-            if result['found_address']['address']:
-                countNFList.append(result)
-                count += 1
-        except KeyError:
-            pass
+            try:
+                if result['found_address']['address']:
+                    countNFList.append(result)
+                    count += 1
+            except KeyError:
+                pass
+        except:
+            continue
+
     workbook.save(filename="output/" + path['url'])
 
     print(f"Not Found: {count}")
@@ -341,7 +365,7 @@ def main():
         th = Thread(target=work_with_files, args=(i,))
         th.start()
         # work_with_files(i)
-
+    # work_with_files(filenames[0])
 
 if __name__ == '__main__':
     main()
