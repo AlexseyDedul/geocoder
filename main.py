@@ -272,35 +272,35 @@ def work_with_files(path):
 
     # for i in range(1, 9):
     for i in range(1, worksheet.max_row + 1):
+        # try:
+        city = worksheet.cell(i, path['city']).value
+        street = worksheet.cell(i, path['street']).value
+        housenumber = worksheet.cell(i, path['number']).value
+        print(f"{city} {street} {housenumber}")
+        result = get_address_from_db(city, street, housenumber)
+        print(result)
         try:
-            city = worksheet.cell(i, path['city']).value
-            street = worksheet.cell(i, path['street']).value
-            housenumber = worksheet.cell(i, path['number']).value
-            print(f"{city} {street} {housenumber}")
-            result = get_address_from_db(city, street, housenumber)
-            print(result)
-            try:
-                worksheet.cell(row=i, column=column).value = f"({result['found_address']['lat']}, {result['found_address']['lan']})"
-                worksheet.cell(row=i, column=column + 1).value = f"({result['correctly']})"
-            except KeyError:
-                pass
+            worksheet.cell(row=i, column=column).value = f"({result['found_address']['lat']}, {result['found_address']['lan']})"
+            worksheet.cell(row=i, column=column + 1).value = f"({result['correctly']})"
+        except KeyError:
+            pass
 
-            try:
-                if not result['correctly']:
-                    countFalse += 1
-                else:
-                    countTrue += 1
-            except KeyError:
-                pass
+        try:
+            if not result['correctly']:
+                countFalse += 1
+            else:
+                countTrue += 1
+        except KeyError:
+            pass
 
-            try:
-                if result['found_address']['address']:
-                    countNFList.append(result)
-                    count += 1
-            except KeyError:
-                pass
-        except:
-            continue
+        try:
+            if result['found_address']['address']:
+                countNFList.append(result)
+                count += 1
+        except KeyError:
+            pass
+        # except:
+        #     continue
 
     workbook.save(filename="output/" + path['url'])
 
@@ -317,42 +317,42 @@ def work_with_files(path):
 
 def main():
     filenames = [
-        {
-            'url': "Белкоопсоюз-Торговый-реестр.xlsx",
-            'city': 7,
-            'street': 8,
-            'number': 9
-        },
-        {
-            'url': "Белкоопсоюз-Торговый-реестр-Общепит.xlsx",
-            'city': 7,
-            'street': 8,
-            'number': 9
-        },
-        {
-            'url': "Белпочта-Торговый-реестр.xlsx",
-            'city': 7,
-            'street': 8,
-            'number': 9
-        },
-        {
-            'url': "Белсоюзпечать-Торговый-реестр.xlsx",
-            'city': 7,
-            'street': 8,
-            'number': 9
-        },
-        {
-            'url': "Santa_read.xlsx",
-            'city': 5,
-            'street': 6,
-            'number': 7
-        },
-        {
-            'url': "ЭНЕРГО-ОИЛ-Торговый-реестр-новые.xlsx",
-            'city': 5,
-            'street': 6,
-            'number': 7
-        },
+        # {
+        #     'url': "Белкоопсоюз-Торговый-реестр.xlsx",
+        #     'city': 7,
+        #     'street': 8,
+        #     'number': 9
+        # },
+        # {
+        #     'url': "Белкоопсоюз-Торговый-реестр-Общепит.xlsx",
+        #     'city': 7,
+        #     'street': 8,
+        #     'number': 9
+        # },
+        # {
+        #     'url': "Белпочта-Торговый-реестр.xlsx",
+        #     'city': 7,
+        #     'street': 8,
+        #     'number': 9
+        # },
+        # {
+        #     'url': "Белсоюзпечать-Торговый-реестр.xlsx",
+        #     'city': 7,
+        #     'street': 8,
+        #     'number': 9
+        # },
+        # {
+        #     'url': "Santa_read.xlsx",
+        #     'city': 5,
+        #     'street': 6,
+        #     'number': 7
+        # },
+        # {
+        #     'url': "ЭНЕРГО-ОИЛ-Торговый-реестр-новые.xlsx",
+        #     'city': 5,
+        #     'street': 6,
+        #     'number': 7
+        # },
         {
             'url': "Сведения_Торгового_реестра_Республики_Беларусь_на_25042022_текущий_2022_загрузка.xlsx",
             'city': 22,
