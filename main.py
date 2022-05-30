@@ -1,8 +1,8 @@
 from threading import Thread
+from time import time
 
 from sqlalchemy import create_engine
 from sqlalchemy import text
-import pandas as pd
 import re
 import psycopg2
 import openpyxl
@@ -11,21 +11,10 @@ engine_from = create_engine("postgresql+psycopg2://dedul:dedul@localhost:15432/g
 
 
 def __sort_results(results):
-    swapped = True
-    while swapped:
-        swapped = False
-        for i in range(len(results) - 1):
-            l = int(re.search(r'\d+', results[i]['housenumb']).group()) if results[i]['housenumb'] is not None and \
-                                                                           re.search(r'\d+', results[i][
-                                                                               'housenumb']) is not None else 0
-            s = int(re.search(r'\d+', results[i + 1]['housenumb']).group()) if results[i + 1][
-                                                                                   'housenumb'] is not None and \
-                                                                               re.search(r'\d+', results[i + 1][
-                                                                                   'housenumb']) is not None else 0
-            if l < s:
-                results[i], results[i + 1] = results[i + 1], results[i]
-                swapped = True
-    return results
+    return sorted(results, key=lambda row: (
+        int(re.search(r'\d+', row['housenumb']).group()) if row['housenumb'] is not None and re.search(r'\d+', row[
+                                                                'housenumb']) is not None else 0
+    ), reverse=True)
 
 
 def __search_address(error_address_before, error_address_after, result, housenumber):
@@ -34,7 +23,7 @@ def __search_address(error_address_before, error_address_after, result, housenum
     list_addr = []
     for index, dict_ in enumerate(result):
         try:
-            s = int(re.search(r'\d+', dict_['housenumb']).group()) - int(re.search(r'\d+', housenumber).group())
+            s = __get_int_type(dict_['housenumb']) - __get_int_type(housenumber)
             if error_address_before <= s <= error_address_after:
                 list_addr.append(dict_)
         except:
@@ -42,16 +31,23 @@ def __search_address(error_address_before, error_address_after, result, housenum
     return list_addr
 
 
+def __search_address2(error_address_before, error_address_after, result, housenumber):
+    return list(filter(lambda item: error_address_before < __get_int_type(item['housenumb']) - __get_int_type(
+        housenumber) < error_address_after, result))
+
+
+def __get_int_type(house_number):
+    return int(re.search(r'\d+', house_number).group()) if house_number is not None \
+                                                           and re.search(r'\d+',
+                                                                         house_number) is not None else 0
+
+
 def correctly_address(results, housenumber):
     full_compare_numb_address = None
     compare_numb_address = None
     for index, dict_ in enumerate(results):
-        numb_out = int(re.search(r'\d+', dict_['housenumb']).group()) if dict_['housenumb'] is not None \
-                                                                         and re.search(r'\d+', dict_[
-            'housenumb']) is not None else 0
-        numb_input = int(re.search(r'\d+', housenumber).group()) if housenumber is not None \
-                                                                    and re.search(r'\d+',
-                                                                                  housenumber) is not None else 0
+        numb_out = __get_int_type(dict_['housenumb'])
+        numb_input = __get_int_type(housenumber)
 
         if str(dict_['housenumb']) == str(housenumber.strip()):
             full_compare_numb_address = dict_
@@ -67,20 +63,27 @@ def correctly_address(results, housenumber):
         return None
 
 
+def correctly_address2(results, housenumber):
+    full_compare_numb_address = next((x for x in results if str(x['housenumb']) == str(housenumber)), None)
+
+    if full_compare_numb_address is not None:
+        return full_compare_numb_address
+    else:
+        return next((x for x in results if __get_int_type(x['housenumb']) == __get_int_type(housenumber)), None)
+
+
 def not_correctly_address(results, housenumber, street):
     if not results:
         return {}
 
     if street is None:
         return results[0]
-    print(housenumber)
+
     if housenumber is None or housenumber == "":
         return results[0]
 
-    left = int(re.search(r'\d+', housenumber).group()) if housenumber is not None and \
-                                                          re.search(r'\d+', housenumber) is not None else 0
-    right = int(re.search(r'\d+', results[0]['housenumb']).group()) if results[0]['housenumb'] is not None and \
-                                                                       re.search(r'\d+', results[0]['housenumb']) is not None else 0
+    left = __get_int_type(housenumber)
+    right = __get_int_type(results[0]['housenumb'])
 
     n = left - right
     if n < 0:
@@ -127,7 +130,7 @@ def __check_symbols_dash_in_word(addr):
     if addr.find('-') == 1:
         return re.findall(r'^\w+[\-]', addr)[0].replace("-", '')
     else:
-        return __check_symbols_drop_in_word(addr)
+        return __check_symbols_drop_in_word(addr.replace("-", ''))
 
 
 def get_correct_address(address):
@@ -148,12 +151,12 @@ def get_correct_address(address):
         return None
 
 
-def __create_sql_query_for_city(city):
+def __create_sql_query_for_city(city, template=None):
     city_query = ""
     if city:
         if isinstance(city, str):
-            city_query = "WHERE translate(name, 'ё', 'е') like translate('%" + city \
-                         + "%', 'ё', 'е') "
+            # city_query = f"WHERE name = '{city}'"
+            city_query = template
         elif isinstance(city, list):
             city_query = "WHERE translate(name, 'ё', 'е') like translate('%" + city[0] \
                          + "%', 'ё', 'е') "
@@ -183,9 +186,9 @@ def __create_sql_query_for_street(street):
         return ""
 
 
-def __get_addresses_list_from_db(city, street=None):
+def __get_addresses_list_from_db(city, street=None, template=None):
     results = []
-    city_query = __create_sql_query_for_city(city)
+    city_query = __create_sql_query_for_city(city, template)
     street_query = __create_sql_query_for_street(street)
     if city_query:
         sql = text("select lat, long, housenumber, housename, regionname from ( \
@@ -217,9 +220,20 @@ def get_address_from_db(city, street, housenumber):
     city_correct = get_correct_address(city)
     housenumber = get_correct_housenumber(housenumber)
     print(f"{city_correct} {street_correct} {housenumber}")
-    results = __get_addresses_list_from_db(city_correct, street_correct)
+    results = __get_addresses_list_from_db(city_correct, street_correct, f"WHERE name = '{city_correct}'")
     if not results:
-        results = __get_addresses_list_from_db(city_correct)
+        results = __get_addresses_list_from_db(city_correct, street_correct, f"WHERE translate(name, 'ё', 'е') = "
+                                                                             f"translate('{city_correct}', 'ё', "
+                                                                             f"'е') ")
+    if not results:
+        results = __get_addresses_list_from_db(city_correct, street=None, template=f"WHERE name = '{city_correct}'")
+        street_correct = None
+
+    if not results:
+        results = __get_addresses_list_from_db(city_correct, street=None, template=f"WHERE translate(name, 'ё', 'е') = "
+                                                                                   f"translate('{city_correct}', 'ё', "
+                                                                                   f"'е') ")
+
         street_correct = None
     if street_correct is not None:
         results = __sort_results(results)
@@ -266,6 +280,10 @@ def work_with_files(path):
     countNFList = []
     countFalse = 0
     countTrue = 0
+
+    print(get_address_from_db('Жары', 'Центральная', '14'))
+
+    return
     column = path['number'] + 9
     workbook = openpyxl.load_workbook('input/' + path['url'])
     worksheet = workbook.active
@@ -280,7 +298,8 @@ def work_with_files(path):
         result = get_address_from_db(city, street, housenumber)
         print(result)
         try:
-            worksheet.cell(row=i, column=column).value = f"({result['found_address']['lat']}, {result['found_address']['lan']})"
+            worksheet.cell(row=i,
+                           column=column).value = f"({result['found_address']['lat']}, {result['found_address']['lan']})"
             worksheet.cell(row=i, column=column + 1).value = f"({result['correctly']})"
         except KeyError:
             pass
@@ -341,31 +360,35 @@ def main():
         #     'street': 8,
         #     'number': 9
         # },
-        # {
-        #     'url': "Santa_read.xlsx",
-        #     'city': 5,
-        #     'street': 6,
-        #     'number': 7
-        # },
+        {
+            'url': "Santa_read.xlsx",
+            'city': 5,
+            'street': 6,
+            'number': 7
+        },
         # {
         #     'url': "ЭНЕРГО-ОИЛ-Торговый-реестр-новые.xlsx",
         #     'city': 5,
         #     'street': 6,
         #     'number': 7
         # },
-        {
-            'url': "Сведения_Торгового_реестра_Республики_Беларусь_на_25042022_текущий_2022_загрузка.xlsx",
-            'city': 22,
-            'street': 23,
-            'number': 24
-        }
+        # {
+        #     'url': "Сведения_Торгового_реестра_Республики_Беларусь_на_25042022_текущий_2022_загрузка.xlsx",
+        #     'city': 22,
+        #     'street': 23,
+        #     'number': 24
+        # }
     ]
 
-    for i in filenames:
-        th = Thread(target=work_with_files, args=(i,))
-        th.start()
-        # work_with_files(i)
-    # work_with_files(filenames[0])
+    # for i in filenames:
+    #     th = Thread(target=work_with_files, args=(i,))
+    #     th.start()
+    # work_with_files(i)
+    t0 = time()
+    work_with_files(filenames[0])
+    tend = (time() - t0)
+    print("time : " + str(tend))
+
 
 if __name__ == '__main__':
     main()

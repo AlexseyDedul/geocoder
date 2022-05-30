@@ -2649,3 +2649,6 @@ print(get_address_from_db('Гомель', 'Ул. Кирова', 'None'))
 print(get_address_from_db('Мозырь', 'Советская,У2', 'None'))
 print(get_address_from_db('Мозырь', 'Советская, У1', 'None'))
 print(get_address_from_db('Мозырь', 'Ленинская,У2', 'None'))
+Not Found: 5
+False: 578
+True: 713
