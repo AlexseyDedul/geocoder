@@ -10,7 +10,7 @@ import re
 import psycopg2
 import openpyxl
 
-engine_from = create_engine("postgresql+psycopg2://dedul:dedul@localhost:15432/gis")
+engine_from = create_engine("postgresql+psycopg2://dbname:dbpass@localhost:15432/gis")
 
 
 def __sort_results(results):
@@ -320,63 +320,13 @@ def statistics(results):
 
 def main():
     filenames = [
-        # {
-        #     'url': "Белкоопсоюз-Торговый-реестр.xlsx",
-        #     'city': 7,
-        #     'street': 8,
-        #     'number': 9
-        # },
-        # {
-        #     'url': "Белкоопсоюз-Торговый-реестр-Общепит.xlsx",
-        #     'city': 7,
-        #     'street': 8,
-        #     'number': 9
-        # },
-        # {
-        #     'url': "Белпочта-Торговый-реестр.xlsx",
-        #     'city': 7,
-        #     'street': 8,
-        #     'number': 9
-        # },
-        # {
-        #     'url': "Белсоюзпечать-Торговый-реестр.xlsx",
-        #     'city': 7,
-        #     'street': 8,
-        #     'number': 9
-        # },
-        # {
-        #     'url': "Santa_read.xlsx",
-        #     'city': 5,
-        #     'street': 6,
-        #     'number': 7
-        # },
-        # {
-        #     'url': "ЭНЕРГО-ОИЛ-Торговый-реестр-новые.xlsx",
-        #     'city': 5,
-        #     'street': 6,
-        #     'number': 7
-        # },
-        # {
-        #     'url': "Сведения_Торгового_реестра_Республики_Беларусь_на_25042022_текущий_2022_загрузка.xlsx",
-        #     'city': 22,
-        #     'street': 23,
-        #     'number': 24
-        # },
-        {
-            'url': "test.xlsx",
-            'city': 3,
-            'street': 4,
-            'number': 5
-        }
     ]
     pool = multiprocessing.Pool(20)
 
     t0 = time()
-    # for i in filenames:
-    #     th = Thread(target=work_with_files, args=(i, pool,))
-    #     th.start()
-    # work_with_files(i)
-    work_with_files(filenames[0], pool)
+    for i in filenames:
+        th = Thread(target=work_with_files, args=(i, pool,))
+        th.start()
     tend = (time() - t0)
     print("time : " + str(tend))
 

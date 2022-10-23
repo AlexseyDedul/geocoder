@@ -7,7 +7,7 @@ import re
 import psycopg2
 import openpyxl
 
-engine_from = create_engine("postgresql+psycopg2://dedul:dedul@localhost:15432/gis")
+engine_from = create_engine("postgresql+psycopg2://dbname:dbpass@localhost:15432/gis")
 
 
 def __sort_results(results):
@@ -288,7 +288,6 @@ def work_with_files(path):
     workbook = openpyxl.load_workbook('input/' + path['url'])
     worksheet = workbook.active
 
-    # for i in range(1, 9):
     for i in range(1, worksheet.max_row + 1):
         # try:
         city = worksheet.cell(i, path['city']).value
@@ -318,8 +317,6 @@ def work_with_files(path):
                 count += 1
         except KeyError:
             pass
-        # except:
-        #     continue
 
     workbook.save(filename="output/" + path['url'])
 
@@ -336,58 +333,12 @@ def work_with_files(path):
 
 def main():
     filenames = [
-        # {
-        #     'url': "Белкоопсоюз-Торговый-реестр.xlsx",
-        #     'city': 7,
-        #     'street': 8,
-        #     'number': 9
-        # },
-        # {
-        #     'url': "Белкоопсоюз-Торговый-реестр-Общепит.xlsx",
-        #     'city': 7,
-        #     'street': 8,
-        #     'number': 9
-        # },
-        # {
-        #     'url': "Белпочта-Торговый-реестр.xlsx",
-        #     'city': 7,
-        #     'street': 8,
-        #     'number': 9
-        # },
-        # {
-        #     'url': "Белсоюзпечать-Торговый-реестр.xlsx",
-        #     'city': 7,
-        #     'street': 8,
-        #     'number': 9
-        # },
-        {
-            'url': "Santa_read.xlsx",
-            'city': 5,
-            'street': 6,
-            'number': 7
-        },
-        # {
-        #     'url': "ЭНЕРГО-ОИЛ-Торговый-реестр-новые.xlsx",
-        #     'city': 5,
-        #     'street': 6,
-        #     'number': 7
-        # },
-        # {
-        #     'url': "Сведения_Торгового_реестра_Республики_Беларусь_на_25042022_текущий_2022_загрузка.xlsx",
-        #     'city': 22,
-        #     'street': 23,
-        #     'number': 24
-        # }
+
     ]
 
-    # for i in filenames:
-    #     th = Thread(target=work_with_files, args=(i,))
-    #     th.start()
-    # work_with_files(i)
-    t0 = time()
-    work_with_files(filenames[0])
-    tend = (time() - t0)
-    print("time : " + str(tend))
+    for i in filenames:
+        th = Thread(target=work_with_files, args=(i,))
+        th.start()
 
 
 if __name__ == '__main__':
